@@ -1,7 +1,7 @@
 import cv2
 import tensorflow as tf
 from tensorflow.keras.applications.vgg19 import VGG19, preprocess_input
-
+import numpy as np
 
 class NeuralStyleTransfer:
 
@@ -23,7 +23,30 @@ class NeuralStyleTransfer:
             "block5_conv2"
         ]
 
-        content_output = [vgg.get_layer(layer_name).output for layer_name in content_layer_names]
-        style_output = [vgg.get_layer(layer_name).output for layer_name in style_layer_names]
+        outputs = [vgg.get_layer(layer_name).output for layer_name in (style_layer_names + content_layer_names)]
 
-        self.model = tf.keras.models.Model(vgg.input, [content_output, style_output])
+        self.model = tf.keras.models.Model([vgg.input], outputs)
+    def calc_content_loss(self, content_img, gen_img):
+
+        losses = []
+        for layer_name in [self.model.layers[-1]]:
+
+            content_layer = self.model.get_layer(layer_name)
+            con = content_layer(content_img)
+            gen = content_layer(gen_img)
+
+            losses.append(np.square(con-gen))
+
+        return tf.reduce_mean(losses)
+
+    def calc_style_loss(self, style_img, gen_img):
+
+
+
+
+
+
+
+
+
+
