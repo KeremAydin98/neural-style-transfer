@@ -7,7 +7,7 @@ content_img = cv2.imread("Data/me.jpg")
 
 nst = NeuralStyleTransfer()
 
-gen_img = nst.style_transfer(content_img, style_img)
+gen_img = nst.transfer(style_img, content_img)
 
 cv2.imshow(gen_img)
 
