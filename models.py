@@ -39,12 +39,14 @@ class NeuralStyleTransfer:
 
     def gram_matrix(self, input_tensor):
 
-        result = tf.matmul(input_tensor, tf.transpose(input_tensor, perm=[0, 2, 1]))
+
+
+        result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
 
         input_shape = tf.shape(input_tensor)
 
-        num_locations = np.prod(input_shape[1:3])
-        num_locations = tf.cast(num_locations, tf.float32)
+        print(float(np.prod(np.array(input_shape[1:3]))))
+        num_locations = float(np.prod(np.array(input_shape[1:3])))
 
         result = result / num_locations
 
@@ -69,17 +71,16 @@ class NeuralStyleTransfer:
     def compute_loss(outputs, targets):
 
         # tf.math.add_n: returns the element-wise sum of a list of tensors
-        return tf.math.add_n([
-            tf.reduce_mean((outputs - targets) ** 2) for key in outputs # ??????????????????????????
-        ])
+        return tf.reduce_mean((outputs - targets) ** 2)
+
 
     def calc_total_loss(self, content_outputs, style_outputs, style_targets, content_targets):
 
         style_loss = self.compute_loss(style_outputs, style_targets)
-        style_loss *= self.style_weight / len(self.style_layers)
+        style_loss *= (self.style_weight / len(self.style_layers))
 
         content_loss = self.compute_loss(content_outputs, content_targets)
-        content_loss *= self.content_weight / len(self.content_layers)
+        content_loss *= (self.content_weight / len(self.content_layers))
 
         return style_loss + content_loss
 
