@@ -29,7 +29,6 @@ nst = NeuralStyleTransfer()
 
 gen_img = nst.transfer(tf.constant(style_img), tf.constant(content_img), epochs=100)
 
-
 def tensor_to_image(tensor):
     tensor = tensor * 255
 

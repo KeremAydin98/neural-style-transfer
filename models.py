@@ -39,7 +39,8 @@ class NeuralStyleTransfer:
 
     def gram_matrix(self, input_tensor):
 
-        result = tf.linalg.matmul(input_tensor, input_tensor, transpose_b=True)
+        result = tf.linalg.matmul(input_tensor, input_tensor, transpose_a=True)
+        #result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
 
         input_shape = tf.shape(input_tensor)
 
@@ -82,7 +83,7 @@ class NeuralStyleTransfer:
 
     def train(self, image, style_targets, content_targets, epochs):
 
-        optimizer = tf.keras.optimizers.Adam(learning_rate=3e-2, beta_1=0.99, epsilon=0.1)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=2e-2, beta_1=0.99, epsilon=0.1)
 
         for _ in tqdm(range(epochs)):
 
