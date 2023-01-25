@@ -39,13 +39,10 @@ class NeuralStyleTransfer:
 
     def gram_matrix(self, input_tensor):
 
-
-
-        result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
+        result = tf.linalg.matmul(input_tensor, input_tensor, transpose_b=True)
 
         input_shape = tf.shape(input_tensor)
 
-        print(float(np.prod(np.array(input_shape[1:3]))))
         num_locations = float(np.prod(np.array(input_shape[1:3])))
 
         result = result / num_locations
@@ -71,8 +68,7 @@ class NeuralStyleTransfer:
     def compute_loss(outputs, targets):
 
         # tf.math.add_n: returns the element-wise sum of a list of tensors
-        return tf.reduce_mean((outputs - targets) ** 2)
-
+        return tf.add_n([tf.reduce_mean((outputs[key] - targets[key]) ** 2) for key in range(len(outputs))])
 
     def calc_total_loss(self, content_outputs, style_outputs, style_targets, content_targets):
 
@@ -84,7 +80,6 @@ class NeuralStyleTransfer:
 
         return style_loss + content_loss
 
-    @tf.function()
     def train(self, image, style_targets, content_targets, epochs):
 
         optimizer = tf.keras.optimizers.Adam(learning_rate=2e-2)
@@ -97,7 +92,7 @@ class NeuralStyleTransfer:
 
             gradient = tape.gradient(loss, image)
             optimizer.apply_gradients([(gradient, image)])
-            image = tf.clip_by_value(image, 0.0, 1.0)
+            image.assign(tf.clip_by_value(image, 0.0, 1.0))
 
         return image
 
@@ -106,9 +101,10 @@ class NeuralStyleTransfer:
         _, style_targets = self.calc_outputs(style_image)
         content_targets, _ = self.calc_outputs(content_image)
 
+        content_image = tf.Variable(content_image)
+
         image = self.train(content_image, style_targets, content_targets, epochs)
 
-        image *= 255
         image = np.array(image, dtype=np.uint8)
 
         if np.ndim(image) > 3:
