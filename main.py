@@ -2,6 +2,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from models import NeuralStyleTransfer
 import numpy as np
+import tensorflow_hub as hub
 
 def load_image(image_path):
 
@@ -26,7 +27,8 @@ content_img = load_image("Data/me.jpg")
 
 nst = NeuralStyleTransfer()
 
-gen_img = nst.transfer(style_img, content_img, epochs=1000)
+gen_img = nst.transfer(tf.constant(style_img), tf.constant(content_img), epochs=100)
+
 
 def tensor_to_image(tensor):
     tensor = tensor * 255
@@ -38,16 +40,29 @@ def tensor_to_image(tensor):
 
     return tensor
 
-def show_image(img):
 
-  if len(img.shape) > 3:
-    img = img[0]
+def show_image(content_img, style_img, img):
 
-  plt.imshow(img)
-  plt.show()
+    fig, ax = plt.subplots(1,3)
+
+    ax[0].imshow(style_img)
+    ax[1].imshow(content_img)
+
+    if len(img.shape) > 3:
+        img = img[0]
+
+    ax[2].imshow(img)
+    plt.show()
 
 
-stylized_img = tensor_to_image(gen_img)
-show_image(stylized_img)
+generated_img = tensor_to_image(gen_img)
+show_image(generated_img)
 
+module_url = ('https://tfhub.dev/google/magenta/arbitrary-image-stylization-v1-256/2')
+hub_module = hub.load(module_url)
+
+results = hub_module(tf.constant(content_img), tf.constant(style_img))
+hub_generated_img = tensor_to_image(results[0])
+
+show_image(hub_generated_img)
 
