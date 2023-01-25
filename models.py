@@ -82,7 +82,7 @@ class NeuralStyleTransfer:
 
     def train(self, image, style_targets, content_targets, epochs):
 
-        optimizer = tf.keras.optimizers.Adam(learning_rate=2e-2)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=3e-2, beta_1=0.99, epsilon=0.1)
 
         for _ in tqdm(range(epochs)):
 
@@ -96,18 +96,15 @@ class NeuralStyleTransfer:
 
         return image
 
-    def transfer(self, style_image, content_image, epochs=10):
+    def transfer(self, style_image, content_image, epochs=1000):
 
         _, style_targets = self.calc_outputs(style_image)
         content_targets, _ = self.calc_outputs(content_image)
 
-        content_image = tf.Variable(content_image)
+        image = tf.random.uniform((1,224,224,3))
+        image = tf.Variable(image)
 
-        image = self.train(content_image, style_targets, content_targets, epochs)
+        image = self.train(image, style_targets, content_targets, epochs)
 
-        image = np.array(image, dtype=np.uint8)
-
-        if np.ndim(image) > 3:
-            image = image[0]
 
         return image
