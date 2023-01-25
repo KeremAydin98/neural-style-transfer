@@ -43,15 +43,17 @@ def tensor_to_image(tensor):
 
 def show_image(content_img, style_img, img):
 
-    fig, ax = plt.subplots(1,3)
+    fig, ax = plt.subplots(1,3, figsize=(15, 15))
 
-    ax[0].imshow(style_img)
-    ax[1].imshow(content_img)
-
+    ax[0].imshow(style_img[0])
+    ax[0].axis('off')
+    ax[1].imshow(content_img[0])
+    ax[1].axis('off')
     if len(img.shape) > 3:
         img = img[0]
 
     ax[2].imshow(img)
+    ax[2].axis('off')
     plt.show()
 
 
