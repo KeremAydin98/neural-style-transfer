@@ -16,7 +16,7 @@ class NeuralStyleTransfer:
 
         # Weights of style and content
         self.style_weight = 1e-2
-        self.content_weight = 1e4
+        self.content_weight = 1e2
 
         # Layer names for content and style
         if content_layers is None:
