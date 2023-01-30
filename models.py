@@ -17,11 +17,11 @@ class NeuralStyleTransfer:
         # Weights of style and content
         self.style_weight = 1e-2
         self.content_weight = 1e3
-        self.tv_loss = 1e-2
+        self.tv_loss = 1e-6
 
         # Layer names for content and style
         if content_layers is None:
-            self.content_layers = ["block2_conv2"]
+            self.content_layers = ["block5_conv2"]
         else:
             self.content_layers = content_layers
         if style_layers is None:
@@ -113,12 +113,12 @@ class NeuralStyleTransfer:
 
         return image
 
-    def transfer(self, style_image, content_image, epochs=1000):
+    def transfer(self, style_image, content_image, epochs=1000, image_size=448):
 
         _, style_targets = self.calc_outputs(style_image)
         content_targets, _ = self.calc_outputs(content_image)
 
-        image = tf.random.uniform((1, 224, 224, 3))
+        image = tf.random.uniform((1, image_size, image_size, 3))
         image = tf.Variable(image)
 
         image = self.train(image, style_targets, content_targets, epochs)

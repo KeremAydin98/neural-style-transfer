@@ -29,7 +29,7 @@ content_img = load_image("Data/me.jpg")
 
 # Transferring the style and content attributes to a noise image
 nst = NeuralStyleTransfer()
-gen_img = nst.transfer(tf.constant(style_img), tf.constant(content_img), epochs=100)
+gen_img = nst.transfer(tf.constant(style_img), tf.constant(content_img), epochs=100, image_size=448)
 
 
 def tensor_to_image(tensor):
