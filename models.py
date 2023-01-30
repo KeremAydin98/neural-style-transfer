@@ -16,11 +16,12 @@ class NeuralStyleTransfer:
 
         # Weights of style and content
         self.style_weight = 1e-2
-        self.content_weight = 1e2
+        self.content_weight = 1e3
+        self.tv_loss = 1e-2
 
         # Layer names for content and style
         if content_layers is None:
-            self.content_layers = ["block5_conv2"]
+            self.content_layers = ["block2_conv2"]
         else:
             self.content_layers = content_layers
         if style_layers is None:
@@ -40,32 +41,28 @@ class NeuralStyleTransfer:
 
     def gram_matrix(self, input_tensor):
 
-        # Multiplication of the input image with its transpose
         result = tf.linalg.matmul(input_tensor, input_tensor, transpose_a=True)
-        #result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
+        # result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
 
-        # Normalization of the input image
         input_shape = tf.shape(input_tensor)
+
         num_locations = float(np.prod(np.array(input_shape[1:3])))
+
         result = result / num_locations
 
         return result
 
     def calc_outputs(self, inputs):
-        # [0-1] to [0-255] scale
+
         inputs = 255 * inputs
 
-        # Prepare image for the VGG19 network
         preprocessed_input = preprocess_input(inputs)
 
-        # Inference of the image through the model
         outputs = self.whole_model(preprocessed_input)
 
-        # Separating style and content outputs
         style_outputs = outputs[:len(self.style_layers)]
         content_outputs = outputs[len(self.style_layers):]
 
-        # Converting style outputs to gram matrix
         style_outputs = [self.gram_matrix(style_output) for style_output in style_outputs]
 
         return content_outputs, style_outputs
@@ -73,48 +70,57 @@ class NeuralStyleTransfer:
     @staticmethod
     def compute_loss(outputs, targets):
 
-        # tf.math.add_n: returns the element wise summation of a list of tensors
+        # tf.math.add_n: returns the element-wise sum of a list of tensors
         return tf.add_n([tf.reduce_mean((outputs[key] - targets[key]) ** 2) for key in range(len(outputs))])
 
-    def calc_total_loss(self, content_outputs, style_outputs, style_targets, content_targets):
+    @staticmethod
+    def compute_tv_loss(output):
 
-        # Computing the losses of style and content outputs
+        return tf.reduce_sum(tf.image.total_variation(output))
+
+    def calc_total_loss(self, output, content_outputs, style_outputs, style_targets, content_targets):
+
         style_loss = self.compute_loss(style_outputs, style_targets)
         style_loss *= (self.style_weight / len(self.style_layers))
+
         content_loss = self.compute_loss(content_outputs, content_targets)
         content_loss *= (self.content_weight / len(self.content_layers))
 
-        return style_loss + content_loss
+        tv_loss = self.compute_tv_loss(output)
+        tv_loss *= tv_loss * self.tv_loss
+
+        return style_loss + content_loss + tv_loss, style_loss, content_loss, tv_loss
 
     def train(self, image, style_targets, content_targets, epochs):
 
-        # Adam optimizer
         optimizer = tf.keras.optimizers.Adam(learning_rate=2e-2, beta_1=0.99, epsilon=0.1)
 
-        for _ in tqdm(range(epochs)):
-            # Forward propagation
-            with tf.GradientTape() as tape:
-                content_outputs, style_outputs = self.calc_outputs(image)
-                loss = self.calc_total_loss(content_outputs, style_outputs, style_targets, content_targets)
+        for epoch in range(epochs):
 
-            # Backward propagation
-            gradient = tape.gradient(loss, image)
-            optimizer.apply_gradients([(gradient, image)])
+            with tf.GradientTape(persistent=True) as tape:
+                content_outputs, style_outputs = self.calc_outputs(image)
+                loss, style_loss, content_loss, tv_loss = self.calc_total_loss(image, content_outputs, style_outputs,
+                                                                               style_targets, content_targets)
+
+            if (epoch + 1) % 100 == 0:
+                print(
+                    f"Epoch: {epoch + 1}/{epochs}, Style Loss: {style_loss}, Content Loss: {content_loss}, Tv Loss: {tv_loss}")
+
+            img_gradient = tape.gradient(loss, image)
+            optimizer.apply_gradients([(img_gradient, image)])
+
             image.assign(tf.clip_by_value(image, 0.0, 1.0))
 
         return image
 
-    def transfer(self, style_image, content_image, image_size=448, epochs=1000):
+    def transfer(self, style_image, content_image, epochs=1000):
 
-        # Calculate the targets of style and content
         _, style_targets = self.calc_outputs(style_image)
         content_targets, _ = self.calc_outputs(content_image)
 
-        # Initialize the noisy image
-        image = tf.random.uniform((1,image_size,image_size,3))
+        image = tf.random.uniform((1, 224, 224, 3))
         image = tf.Variable(image)
 
-        # Start the training
         image = self.train(image, style_targets, content_targets, epochs)
 
         return image
