@@ -7,6 +7,9 @@ from tensorflow.keras.applications.vgg19 import VGG19, preprocess_input
 class NeuralStyleTransfer:
 
     def __init__(self,
+                 style_weight,
+                 content_weight,
+                 tv_weight,
                  content_layers=None,
                  style_layers=None):
 
@@ -15,9 +18,9 @@ class NeuralStyleTransfer:
         self.base_model.trainable = False
 
         # Weights of style and content
-        self.style_weight = 1e-2
-        self.content_weight = 1e3
-        self.tv_loss = 1e-6
+        self.style_weight = style_weight
+        self.content_weight = content_weight
+        self.tv_loss_weight = tv_weight
 
         # Layer names for content and style
         if content_layers is None:
@@ -87,7 +90,7 @@ class NeuralStyleTransfer:
         content_loss *= (self.content_weight / len(self.content_layers))
 
         tv_loss = self.compute_tv_loss(output)
-        tv_loss *= tv_loss * self.tv_loss
+        tv_loss *= tv_loss * self.tv_loss_weight
 
         return style_loss + content_loss + tv_loss, style_loss, content_loss, tv_loss
 
@@ -96,22 +99,20 @@ class NeuralStyleTransfer:
         optimizer = tf.keras.optimizers.Adam(learning_rate=2e-2, beta_1=0.99, epsilon=0.1)
 
         for epoch in range(epochs):
-
             with tf.GradientTape(persistent=True) as tape:
                 content_outputs, style_outputs = self.calc_outputs(image)
                 loss, style_loss, content_loss, tv_loss = self.calc_total_loss(image, content_outputs, style_outputs,
                                                                                style_targets, content_targets)
 
-            if (epoch + 1) % 100 == 0:
-                print(
-                    f"Epoch: {epoch + 1}/{epochs}, Style Loss: {style_loss}, Content Loss: {content_loss}, Tv Loss: {tv_loss}")
+            """if (epoch + 1) % 100 == 0:
+              print(f"Epoch: {epoch+1}/{epochs}, Total Loss: {loss}, Style Loss: {style_loss}, Content Loss: {content_loss}, Tv Loss: {tv_loss}")"""
 
             img_gradient = tape.gradient(loss, image)
             optimizer.apply_gradients([(img_gradient, image)])
 
             image.assign(tf.clip_by_value(image, 0.0, 1.0))
 
-        return image
+        return image, style_loss, content_loss, tv_loss
 
     def transfer(self, style_image, content_image, epochs=1000, image_size=448):
 
