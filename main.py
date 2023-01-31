@@ -24,8 +24,8 @@ def load_image(image_path, image_size=448):
 
 
 # Loading the images
-style_img = load_image("Data/van-gogh.jpg")
-content_img = load_image("Data/me.jpg")
+style_img = load_image("Data/starry_night.jpg")
+content_img = load_image("Data/night_sky.jpg")
 
 # Transferring the style and content attributes to a noise image
 nst = NeuralStyleTransfer()
@@ -59,14 +59,12 @@ def show_image(content_img, style_img, img):
     ax[2].axis('off')
     plt.show()
 
+
 style_weights = [1e-4, 1e-3, 1e-2, 1e-1]
 content_weights = [1e4, 1e3, 1e2, 1e1]
 tv_weights = [1e-7, 1e-6, 1e-5]
 
-losses = []
-
-i = 0
-for tv_weight in tv_weights:
+for k, tv_weight in enumerate(tv_weights):
   fig, ax = plt.subplots(4,4,figsize=(12,12))
   fig.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -84,11 +82,12 @@ for tv_weight in tv_weights:
       ax[i,j].set_title(f"Content Weight: {content_weight}\nStyle Weight: {style_weight}")
 
   plt.suptitle(f"Total variation loss: {tv_weight}")
+  plt.savefig(f'/content/drive/MyDrive/Colab Notebooks/Projects/neuralStyleTransfer/{k}_image.png')
   plt.show()
 
 # Loading the images
-style_img = load_image("Data/van-gogh.jpg", 224)
-content_img = load_image("Data/me.jpg", 224)
+style_img = load_image("Data/starry_night.jpg", 224)
+content_img = load_image("Data/night_sky.jpg", 224)
 
 # Load the pretrained neural style transfer model from tf_hub to compare
 module_url = 'https://tfhub.dev/google/magenta/arbitrary-image-stylization-v1-256/2'
@@ -97,7 +96,7 @@ hub_module = hub.load(module_url)
 # Start the pretrained neural style transfer
 results = hub_module(tf.constant(content_img), tf.constant(style_img))
 hub_generated_img = tensor_to_image(results[0])
-plt.figure(2)
+
 # Display the generated image by pretrained model
 show_image(hub_generated_img)
 
