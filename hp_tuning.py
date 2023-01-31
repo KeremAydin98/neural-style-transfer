@@ -17,7 +17,6 @@ tv_weights = [1e-7, 1e-6, 1e-5]
 for k, tv_weight in enumerate(tv_weights):
   fig, ax = plt.subplots(4,4,figsize=(12,12))
   fig.tight_layout(rect=[0, 0.03, 1, 0.95])
-
   for i, content_weight in enumerate(content_weights):
     for j, style_weight in enumerate(style_weights):
 
