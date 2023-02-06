@@ -42,4 +42,8 @@ https://arxiv.org/abs/1508.06576
 
 More detailed look on the paper:
 
+https://arxiv.org/abs/1701.01036
 
+Brilliant explanation by Aleksa Gordic:
+
+https://www.youtube.com/watch?v=S78LQebx6jo&list=PLBoQnSflObcmbfshq9oNs41vODgXG-608
