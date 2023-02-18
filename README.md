@@ -22,7 +22,7 @@ Transfering style is a bit more tricky, because style is embedded at both the lo
 
 Since this is a machine learning solution, there is going to be hyperparameter tuning. The hyperparameters are the weights of the content and style layers. From the paper, we know that the content weight must have much higher weight than style weight. But there was a problem, the generated images had high shifts between pixels. To fix this, people have introduced total variation loss which is the difference between neighboring pixels. Therefore at last I had three different hyperparameters: content, style and total variation weight. 
 
-The experimentations can be seen below.
+The experimentations can be seen below:
 
 ![0_image](https://user-images.githubusercontent.com/77073029/215739543-8cf82d88-471e-44d8-8925-aa2315fccf51.png)
 
