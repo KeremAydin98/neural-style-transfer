@@ -109,24 +109,25 @@ class NeuralStyleTransfer:
 
     def content_train(self, image , content_targets, epochs):
 
-      optimizer = tf.keras.optimizers.Adam(learning_rate =2e-2, beta_1=0.99, epsilon=0.1)
+        optimizer = tf.keras.optimizers.Adam(learning_rate =2e-2, beta_1=0.99, epsilon=0.1)
 
-      for epoch in range(epochs):
+        images = []
 
-        with tf.GradientTape(persistent=True) as tape:
+        for _ in range(epochs):
 
-          content_outputs, _ = self.calc_outputs(image)
-          loss = self.calc_total_loss(image, content_outputs, content_targets, content_only=True)
+            with tf.GradientTape(persistent=True) as tape:
 
-        if (epoch + 1) % 100 == 0:
-              print(f"Epoch: {epoch+1}/{epochs}, Content Loss: {loss}")
+                content_outputs, _ = self.calc_outputs(image)
+                loss = self.calc_total_loss(image, content_outputs, content_targets, content_only=True)
 
-        img_gradient = tape.gradient(loss, image)
-        optimizer.apply_gradients([(img_gradient, image)])
+            img_gradient = tape.gradient(loss, image)
+            optimizer.apply_gradients([(img_gradient, image)])
 
-        image.assign(tf.clip_by_value(image, 0.0, 1.0))
+            image.assign(tf.clip_by_value(image, 0.0, 1.0))
 
-      return image
+            images.append(tf.squeeze(image))
+
+        return images
 
     def train(self, image, style_targets, content_targets, epochs):
 
@@ -167,6 +168,6 @@ class NeuralStyleTransfer:
       image = tf.random.uniform((1, image_size, image_size, 3))
       image = tf.Variable(image)
 
-      image = self.content_train(image, content_targets, epochs)
+      images = self.content_train(image, content_targets, epochs)
 
-      return image
+      return images
