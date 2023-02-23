@@ -3,7 +3,6 @@ import tensorflow as tf
 from tqdm import tqdm
 from tensorflow.keras.applications.vgg19 import VGG19, preprocess_input
 
-
 class NeuralStyleTransfer:
 
     def __init__(self,
@@ -45,7 +44,7 @@ class NeuralStyleTransfer:
     def gram_matrix(self, input_tensor):
 
         result = tf.linalg.matmul(input_tensor, input_tensor, transpose_a=True)
-        # result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
+        #result = tf.linalg.einsum('bijc,bijd->bcd', input_tensor, input_tensor)
 
         input_shape = tf.shape(input_tensor)
 
@@ -72,37 +71,72 @@ class NeuralStyleTransfer:
 
     @staticmethod
     def compute_loss(outputs, targets):
-
-        # tf.math.add_n: returns the element-wise sum of a list of tensors
-        return tf.add_n([tf.reduce_mean((outputs[key] - targets[key]) ** 2) for key in range(len(outputs))])
-
+      
+      # tf.math.add_n: returns the element-wise sum of a list of tensors
+      return tf.add_n([tf.reduce_mean((outputs[key] - targets[key]) ** 2) for key in range(len(outputs))])
+    
     @staticmethod
     def compute_tv_loss(output):
 
-        return tf.reduce_sum(tf.image.total_variation(output))
+      return tf.reduce_sum(tf.image.total_variation(output))
 
-    def calc_total_loss(self, output, content_outputs, style_outputs, style_targets, content_targets):
+    def calc_total_loss(self, output, content_outputs, content_targets, style_outputs=None, style_targets=None, content_only=False, style_only=False):
 
-        style_loss = self.compute_loss(style_outputs, style_targets)
-        style_loss *= (self.style_weight / len(self.style_layers))
+        if content_only:
 
-        content_loss = self.compute_loss(content_outputs, content_targets)
-        content_loss *= (self.content_weight / len(self.content_layers))
+          content_loss = self.compute_loss(content_outputs, content_targets)
 
-        tv_loss = self.compute_tv_loss(output)
-        tv_loss *= tv_loss * self.tv_loss_weight
+          return content_loss
 
-        return style_loss + content_loss + tv_loss, style_loss, content_loss, tv_loss
+        elif style_only:
+
+          style_loss = self.compute_loss(style_outputs, style_targets)
+
+          return style_loss 
+
+        else:
+
+          style_loss = self.compute_loss(style_outputs, style_targets)
+          style_loss *= (self.style_weight / len(self.style_layers))
+
+          content_loss = self.compute_loss(content_outputs, content_targets)
+          content_loss *= (self.content_weight / len(self.content_layers))
+
+          tv_loss = self.compute_tv_loss(output)
+          tv_loss *= tv_loss * self.tv_loss_weight
+
+          return style_loss + content_loss + tv_loss, style_loss, content_loss, tv_loss
+
+    def content_train(self, image , content_targets, epochs):
+
+      optimizer = tf.keras.optimizers.Adam(learning_rate =2e-2, beta_1=0.99, epsilon=0.1)
+
+      for epoch in range(epochs):
+
+        with tf.GradientTape(persistent=True) as tape:
+
+          content_outputs, _ = self.calc_outputs(image)
+          loss = self.calc_total_loss(image, content_outputs, content_targets, content_only=True)
+
+        if (epoch + 1) % 100 == 0:
+              print(f"Epoch: {epoch+1}/{epochs}, Content Loss: {loss}")
+
+        img_gradient = tape.gradient(loss, image)
+        optimizer.apply_gradients([(img_gradient, image)])
+
+        image.assign(tf.clip_by_value(image, 0.0, 1.0))
+
+      return image
 
     def train(self, image, style_targets, content_targets, epochs):
 
         optimizer = tf.keras.optimizers.Adam(learning_rate=2e-2, beta_1=0.99, epsilon=0.1)
 
         for epoch in range(epochs):
+
             with tf.GradientTape(persistent=True) as tape:
                 content_outputs, style_outputs = self.calc_outputs(image)
-                loss, style_loss, content_loss, tv_loss = self.calc_total_loss(image, content_outputs, style_outputs,
-                                                                               style_targets, content_targets)
+                loss, style_loss, content_loss, tv_loss = self.calc_total_loss(image, content_outputs, style_outputs, style_targets, content_targets)
 
             """if (epoch + 1) % 100 == 0:
               print(f"Epoch: {epoch+1}/{epochs}, Total Loss: {loss}, Style Loss: {style_loss}, Content Loss: {content_loss}, Tv Loss: {tv_loss}")"""
@@ -112,16 +146,27 @@ class NeuralStyleTransfer:
 
             image.assign(tf.clip_by_value(image, 0.0, 1.0))
 
-        return image, style_loss, content_loss, tv_loss
+        return image
 
-    def transfer(self, style_image, content_image, epochs=1000, image_size=448):
+    def transfer(self, style_image, content_image, epochs=1000,image_size=448):
 
         _, style_targets = self.calc_outputs(style_image)
         content_targets, _ = self.calc_outputs(content_image)
 
-        image = tf.random.uniform((1, image_size, image_size, 3))
+        image = tf.random.uniform((1,image_size,image_size,3))
         image = tf.Variable(image)
 
         image = self.train(image, style_targets, content_targets, epochs)
 
         return image
+
+    def content_transfer_only(self, content_image, epochs=1000, image_size=448):
+
+      content_targets, _ = self.calc_outputs(content_image)
+
+      image = tf.random.uniform((1, image_size, image_size, 3))
+      image = tf.Variable(image)
+
+      image = self.content_train(image, content_targets, epochs)
+
+      return image
