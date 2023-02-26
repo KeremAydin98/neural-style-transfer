@@ -80,7 +80,7 @@ class NeuralStyleTransfer:
 
       return tf.reduce_sum(tf.image.total_variation(output))
 
-    def calc_total_loss(self, output, content_outputs, content_targets, style_outputs=None, style_targets=None, content_only=False, style_only=False):
+    def calc_total_loss(self, output=None, content_outputs=None, content_targets=None, style_outputs=None, style_targets=None, content_only=False, style_only=False):
 
         if content_only:
 
@@ -107,29 +107,61 @@ class NeuralStyleTransfer:
 
           return style_loss + content_loss + tv_loss, style_loss, content_loss, tv_loss
 
+    def style_train(self, image, style_targets, which_layer, epochs):
+
+      optimizer = tf.keras.optimizers.Adam(learning_rate =2e-2, beta_1=0.99, epsilon=0.1)
+
+      images = []
+
+      for epoch in range(epochs):
+
+        with tf.GradientTape(persistent=True) as tape:
+
+          _, style_outputs = self.calc_outputs(image)
+
+          loss = self.calc_total_loss(image, style_outputs=style_outputs[which_layer], style_targets=style_targets[which_layer], style_only=True)
+
+        if (epoch + 1) % 100 == 0:
+              print(f"Epoch: {epoch+1}/{epochs}, Style Loss: {loss}")
+
+        img_gradient = tape.gradient(loss, image)
+        optimizer.apply_gradients([(img_gradient, image)])
+
+        image.assign(tf.clip_by_value(image, 0.0, 1.0))
+
+        if (epoch + 1) % 20 == 0:
+          images.append(self.tensor_to_image(image))
+
+      return images
+
+
     def content_train(self, image , content_targets, epochs):
 
-        optimizer = tf.keras.optimizers.Adam(learning_rate =2e-2, beta_1=0.99, epsilon=0.1)
+      optimizer = tf.keras.optimizers.Adam(learning_rate =2e-2, beta_1=0.99, epsilon=0.1)
 
-        images = []
+      images = []
 
-        for _ in range(epochs):
+      for epoch in range(epochs):
 
-            with tf.GradientTape(persistent=True) as tape:
+        with tf.GradientTape(persistent=True) as tape:
 
-                content_outputs, _ = self.calc_outputs(image)
-                loss = self.calc_total_loss(image, content_outputs, content_targets, content_only=True)
+          content_outputs, _ = self.calc_outputs(image)
+          loss = self.calc_total_loss(image, content_outputs, content_targets, content_only=True)
 
-            img_gradient = tape.gradient(loss, image)
-            optimizer.apply_gradients([(img_gradient, image)])
+        if (epoch + 1) % 100 == 0:
+              print(f"Epoch: {epoch+1}/{epochs}, Content Loss: {loss}")
 
-            image.assign(tf.clip_by_value(image, 0.0, 1.0))
+        img_gradient = tape.gradient(loss, image)
+        optimizer.apply_gradients([(img_gradient, image)])
 
-            images.append(tf.squeeze(image))
+        image.assign(tf.clip_by_value(image, 0.0, 1.0))
 
-        return images
+        if (epoch + 1) % 20 == 0:
+          images.append(self.tensor_to_image(image))
 
-    def train(self, image, style_targets, content_targets, epochs):
+      return images
+
+    def train(self, image, style_targets=None, content_targets=None, epochs=1000, content_only=False, style_only=False):
 
         optimizer = tf.keras.optimizers.Adam(learning_rate=2e-2, beta_1=0.99, epsilon=0.1)
 
@@ -171,3 +203,25 @@ class NeuralStyleTransfer:
       images = self.content_train(image, content_targets, epochs)
 
       return images
+
+    def style_transfer_only(self, style_image, which_layer, epochs=1000, image_size=448):
+
+      _, style_targets = self.calc_outputs(style_image)
+
+      image = tf.random.uniform((1, image_size, image_size, 3))
+      image = tf.Variable(image)
+
+      images = self.style_train(image, style_targets, which_layer, epochs)
+
+      return images
+
+    def tensor_to_image(self, tensor):
+
+      tensor = tensor * 255
+
+      tensor = np.array(tensor, dtype=np.uint8)
+
+      if np.ndim(tensor) > 3:
+        tensor = tensor[0]
+        
+      return tensor
