@@ -22,6 +22,10 @@ Content feature maps lies in higher level CNN layers since those contain the hig
 
 Transfering style is a bit more tricky, because style is embedded at both the low level and high level in the image. So the feature maps of each block has an effect on the style. I have used one layer from each convolution block from VGG net. However, this time the mean squared error are computed with the gram matrix of feature maps rather than feature maps themselves. Gram matrix is the matrix multiplication of a matrix's transpose with itself. 
 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/77073029/221694413-b95c628b-ff28-40b5-9390-339cf29abc42.gif" />
+</p>
+
 ## Experimentation
 
 Since this is a machine learning solution, there is going to be hyperparameter tuning. The hyperparameters are the weights of the content and style layers. From the paper, we know that the content weight must have much higher weight than style weight. But there was a problem, the generated images had high shifts between pixels. To fix this, people have introduced total variation loss which is the difference between neighboring pixels. Therefore at last I had three different hyperparameters: content, style and total variation weight. 
