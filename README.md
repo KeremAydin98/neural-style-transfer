@@ -14,17 +14,21 @@ There was no need to train a CNN model from scratch since we only need to extrac
 
 Content feature maps lies in higher level CNN layers since those contain the higher level patterns like objects within the image, we do not need the tiny details. Thus I have chosen the second layer of fifth block in the VGG net, since it is the last layer of convolution structure of VGG. And only thing to do to transfer this content to the noisy image is the computation of mean squared error loss of each pixel, then compute the gradient noisy image respect to the content feature map and applying it to the noisy image. 
 
+
 <p align="center">
   <img src="https://user-images.githubusercontent.com/77073029/221670671-4845382b-0941-487f-ba8b-f545ea0880db.gif" />
 </p>
+
 
 ### Transfering style 
 
 Transfering style is a bit more tricky, because style is embedded at both the low level and high level in the image. So the feature maps of each block has an effect on the style. I have used one layer from each convolution block from VGG net. However, this time the mean squared error are computed with the gram matrix of feature maps rather than feature maps themselves. Gram matrix is the matrix multiplication of a matrix's transpose with itself. 
 
+
 <p align="center">
   <img src="https://user-images.githubusercontent.com/77073029/221694413-b95c628b-ff28-40b5-9390-339cf29abc42.gif" />
 </p>
+
 
 ## Experimentation
 
